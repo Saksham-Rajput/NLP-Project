@@ -1,2 +1,3 @@
 # NLP-Project
 The aim of this project is to use NLP( Natural Language Processing) methods on a set of data and create an algorithm which, given a sentence, predicts the next word in a sentence just like the smart keyboards available in our smartphones. This project will start with the basics, analyzing a large corpus of text documents to discover the structure in the data and how words are put together. It will cover cleaning and analyzing text data, then building and sampling from a predictive text model. Finally, I will build a predictive text product on shiny apps. 
+The milestone report can be viewed on https://rpubs.com/saksham5/676602
