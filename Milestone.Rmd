@@ -133,4 +133,4 @@ plot3
 It is interesting to note here that as we increase the group size, the frequency of the group of words decrease which can pose a problem.
 
 #Future Plan :-
-In order to make a shiny app and developing an algorithm, I will take the help of these n-gram tokens to figure the next worfd in a sentence. However for this the efficiency of generation of these tokens needs to be increased to get better results.
+In order to make a shiny app and developing an algorithm, I will take the help of these n-gram tokens to figure the next word in a sentence. However for this the efficiency of generation of these tokens needs to be increased to get better results.
