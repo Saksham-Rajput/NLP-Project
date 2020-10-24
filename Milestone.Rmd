@@ -1,0 +1,136 @@
+---
+title: "Milestone Report"
+author: "Saksham"
+date: "15/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+#Executive Summary :- 
+This is a milestone report for the data science capstone project. In this project, the goal is to work on understanding and building predictive text models like those used by SwiftKey. I have started with the basics, analyzing a corpus of text documents to discover the structure in the data and how words are put together. This covers cleaning and analyzing text data and tokenization of documents. This report shows the work that I have done and also my plans ahead. 
+
+#1) Getting Data :- 
+
+```{r }
+twitter <- readLines(con <- file("C:/Users/user/Documents/DS capstone/Coursera-SwiftKey/en_US/en_US.twitter.txt"), encoding = "UTF-8", skipNul = TRUE)
+close(con)
+blog <- readLines(con <- file("C:/Users/user/Documents/DS capstone/Coursera-SwiftKey/en_US/en_US.blogs.txt"), encoding = "UTF-8", skipNul = TRUE)
+close(con)
+con <- file("C:/Users/user/Documents/DS capstone/Coursera-SwiftKey/en_US/en_US.news.txt", "rb")
+news <- readLines(con, encoding = "UTF-8")
+close(con)
+```
+
+We have three sources of english text - twitter, news and blogs. We are going to use these for our project.
+
+#2) Data Statistics :-
+
+```{r echo = FALSE}
+tl <- length(twitter)
+bl <- length(blog)
+nl <- length(news)
+ts <- format(object.size(twitter), units = "Mb")
+bs <- format(object.size(blog), units = "Mb")
+ns <- format(object.size(news), units = "Mb")
+len <- c(tl, bl, nl)
+size <- c(ts, bs, ns)
+info <- data.frame(no_of_entries = len, size = size )
+row.names(info) <- c("twitter", "blogs", "news")
+info
+```
+
+Here we can see that each of these files are very big in size. Since the files are big and occupy large amount of memory, I won't analyse them any more and make a smaller sample.
+
+#3) Sampling the Data :-
+
+```{r}
+set.seed(123)
+nsample <- sample(news, size = length(news)*0.01)
+tsample <- sample(twitter, size = length(twitter)*0.01)
+bsample <- sample(blog, size = length(blog)*0.01)
+samp <- c(nsample, tsample, bsample)
+```
+```{r echo = FALSE}
+rm(news, twitter, blog, con)
+gc()
+slen <- length(samp)
+sampsize <- format(object.size(samp), units = "Mb")
+sampwords <- sapply(strsplit(samp, " "), length)
+summ <- summary(sampwords)
+totalwords <- sum(sampwords)
+info2 <- data.frame(length = slen, size= sampsize, total_words = totalwords )
+info2$avg_words <- summ[4]
+info2
+```
+
+I have created a random sample using all three sources which is now smaller in size and now it can be used for this project. Given are some of the statistics of this sample.
+
+#Creating Corpus and Transformation :-
+
+```{r}
+library(tm)
+mycorp <- VCorpus(VectorSource(samp), readerControl = list(language = "en"))
+mycorp <- tm_map(mycorp, content_transformer(tolower))
+mycorp <- tm_map(mycorp, removeNumbers)
+mycorp <- tm_map(mycorp, stripWhitespace)
+remapostrophe <- function(x) { gsub("'s", "", x)}
+remhyphen <- function(x) { gsub("-", " ", x)}
+mycorp <- tm_map(mycorp, content_transformer(remapostrophe))
+mycorp <- tm_map(mycorp, content_transformer(remhyphen))
+rm_punc <- function(x) { gsub("[^'[:^punct:]]", "",x, perl = T)}
+mycorp <- tm_map(mycorp, content_transformer(rm_punc))
+profane <- c("nigga", "ass", "pussy", "slut", "dick")
+mycorp <- tm_map(mycorp, removeWords, profane)
+mycorp  <- tm_map(mycorp, removeWords, stopwords("english"))
+```
+
+So now a corpus of the sample has been obtained and using some transformations, the text is converted so that it can be 'tokenized', i.e., words can be extracted from it for further processing.
+
+#Generating N-Gram Tokens :-
+
+```{r}
+library(RWeka)
+library(slam)
+library(ggplot2)
+unigram <- function(x) NGramTokenizer(x, Weka_control(min=1, max=1))
+unidtm <- DocumentTermMatrix(mycorp, control = list(tokenize = unigram))
+unidtm <- removeSparseTerms(unidtm, 0.99)
+freqterm <- findFreqTerms(unidtm)
+csum <- slam::col_sums(unidtm[,unidtm$dimnames$Terms %in% freqterm])
+wordfreq <- data.frame(word = freqterm, Freq = csum)
+wordfreq <- wordfreq[order(wordfreq$Freq, decreasing = T),]
+plot1 <- ggplot(wordfreq[1:10,], aes(x = Freq, y= word) ) + geom_bar(stat = "identity")
+plot1
+```
+
+This is a plot of top 10 most occuring words except the common stopwords such as it, the, he, etc.
+Similary below we have collected the most commonly occuring pair of words in the sample and then most common words in group of 3.
+
+```{r echo=FALSE}
+bigram <- function(x) NGramTokenizer(x, Weka_control(min=2, max=2))
+bidtm <- DocumentTermMatrix(mycorp, control = list(tokenize = bigram))
+bidtm <- removeSparseTerms(bidtm, 0.999)
+freqterm2 <- findFreqTerms(bidtm)
+csum2 <- slam::col_sums(bidtm[,bidtm$dimnames$Terms %in% freqterm2])
+wordfreq2 <- data.frame(word = freqterm2, Freq = csum2)
+wordfreq2 <- wordfreq2[order(wordfreq2$Freq, decreasing = T),]
+plot2 <- ggplot(wordfreq2[1:10,], aes(x = Freq, y= word) ) + geom_bar(stat = "identity")
+plot2
+trigram <- function(x) NGramTokenizer(x, Weka_control(min=3, max=4))
+tridtm <- DocumentTermMatrix(mycorp, control = list(tokenize = trigram))
+tridtm <- removeSparseTerms(tridtm, 0.9999)
+freqterm3 <- findFreqTerms(tridtm)
+csum3 <- slam::col_sums(tridtm[,tridtm$dimnames$Terms %in% freqterm3])
+wordfreq3 <- data.frame(word = freqterm3, Freq = csum3)
+wordfreq3 <- wordfreq3[order(wordfreq3$Freq, decreasing = T),]
+plot3 <- ggplot(wordfreq3[1:10,], aes(x = Freq, y= word) ) + geom_bar(stat = "identity")
+plot3
+```
+
+It is interesting to note here that as we increase the group size, the frequency of the group of words decrease which can pose a problem.
+
+#Future Plan :-
+In order to make a shiny app and developing an algorithm, I will take the help of these n-gram tokens to figure the next worfd in a sentence. However for this the efficiency of generation of these tokens needs to be increased to get better results.
